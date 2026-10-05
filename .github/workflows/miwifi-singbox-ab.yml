@@ -1,0 +1,55 @@
+name: MIWIFI SingBox ARMv7 A-B Build
+
+on:
+  push:
+    branches:
+      - miwifi-singbox-ab-build
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sing-box 1.12.13
+        uses: actions/checkout@v4
+        with:
+          repository: SagerNet/sing-box
+          ref: v1.12.13
+          fetch-depth: 1
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.5'
+
+      - name: Build minimal ARMv7 diagnostic core
+        env:
+          CGO_ENABLED: '0'
+          GOOS: linux
+          GOARCH: arm
+          GOARM: '7'
+        run: |
+          set -euxo pipefail
+          go build -trimpath \
+            -ldflags "-X github.com/sagernet/sing-box/constant.Version=1.12.13 -s -w -buildid=" \
+            -tags "with_quic" \
+            -o sing-box-armv7-min \
+            ./cmd/sing-box
+          chmod +x sing-box-armv7-min
+          ls -lh sing-box-armv7-min
+          sha256sum sing-box-armv7-min | tee SHA256SUMS.txt
+          file sing-box-armv7-min
+          test "$(stat -c%s sing-box-armv7-min)" -lt 20000000
+
+      - name: Upload diagnostic core
+        uses: actions/upload-artifact@v4
+        with:
+          name: sing-box-1.12.13-armv7-min
+          path: |
+            sing-box-armv7-min
+            SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 1
