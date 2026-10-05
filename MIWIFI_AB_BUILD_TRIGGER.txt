@@ -1,0 +1,1 @@
+Trigger minimal SingBox ARMv7 diagnostic build for MIWIFI A/B test.
